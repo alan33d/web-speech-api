@@ -39,7 +39,7 @@ recognition.interimResults = true;
 recognition.onresult = (event) => {
   const result = event.results[event.resultIndex];
 
-  if (result.audioEndTime !== null) {
+  if (result.audioEndTime !== null && result.audioEndTime !== undefined) {
     // Calculate on-device processing latency
     const processingLatencyMs = event.timeStamp - result.audioEndTime;
 
@@ -87,7 +87,7 @@ recognition.onaudiostart = (event) => {
 
 recognition.onresult = async (event) => {
   const result = event.results[event.resultIndex];
-  if (result.audioEndTime === null) return;
+  if (result.audioEndTime === null || result.audioEndTime === undefined) return;
 
   // 2. Convert stream offsets to document time origin coordinates
   const absoluteAudioStart = audioOriginTime + result.audioStartTime;
