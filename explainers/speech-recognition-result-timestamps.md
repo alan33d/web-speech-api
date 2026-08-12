@@ -17,10 +17,10 @@ We propose extending the `SpeechRecognitionResult` interface to include optional
 
 ```webidl
 partial interface SpeechRecognitionResult {
-    // Start timestamp of the audio segment in milliseconds (relative to time origin)
+    // Start timestamp of the audio segment in milliseconds (relative to the start of the audio stream)
     readonly attribute DOMHighResTimeStamp? audioStartTime;
 
-    // End timestamp of the audio segment in milliseconds (relative to time origin)
+    // End timestamp of the audio segment in milliseconds (relative to the start of the audio stream)
     readonly attribute DOMHighResTimeStamp? audioEndTime;
 };
 ```
