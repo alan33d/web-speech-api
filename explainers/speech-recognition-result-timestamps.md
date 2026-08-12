@@ -69,8 +69,6 @@ To convert stream-relative timestamps to document time coordinates:
 $$\text{absoluteStartTime} = \text{audioOrigin} + \text{result.audioStartTime}$$
 $$\text{absoluteEndTime} = \text{audioOrigin} + \text{result.audioEndTime}$$
 
----
-
 ### Measuring Live Translation Latency Example
 
 In live speech translation workflows, measuring both **Speech-to-Text (STT) latency** and **Machine Translation (MT) end-to-end latency** is essential:
@@ -110,7 +108,8 @@ recognition.onresult = async (event) => {
   console.log(`ASR Processing Time: ${asrLatencyMs.toFixed(1)}ms`);
   console.log(`Total Live Translation Delay: ${totalE2ELatencyMs.toFixed(1)}ms`);
 };
-
+```
+---
 ### Security and Privacy Considerations
 
 #### Fingerprinting Risk
