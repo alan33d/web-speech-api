@@ -95,6 +95,8 @@ recognition.onresult = (event) => {
 
 In live video conferencing, video frames delivered via `HTMLVideoElement.requestVideoFrameCallback()` contain presentation timestamps (`metadata.expectedDisplayTime`) relative to the document timeline. When video playout is buffered to accommodate ASR processing, developers can map `speechStartTime` and `speechEndTime` to the document timeline to render captions on the exact video frames when the speaker was talking:
 
+*(See the [interactive live video lip-sync demo](https://alan33d.github.io/web-speech-demos/webrtc_caption_sync_test.html) for a working prototype of this pattern).*
+
 ```javascript
 const recognition = new SpeechRecognition();
 recognition.continuous = true;
