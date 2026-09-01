@@ -171,12 +171,4 @@ To mitigate potential side-channel and fingerprinting vectors:
   3. **No Support for Interim Results:** While a speaker is actively talking mid-sentence, `speechend` cannot fire, leaving streaming captions without timing information.
   4. **Endpointer Trailing Silence Skew:** Voice Activity Detection (VAD) endpointers only fire `speechend` after observing 500ms–1500ms of trailing silence. This introduces non-speech padding into the timestamp, degrading audio alignment.
 
-- **Overloading `SpeechRecognitionEvent.timeStamp`:**
-  Modifying `event.timeStamp` on the `result` event was considered, but fails because:
-  1. **Container of Multiple Results:** In continuous recognition, `event.results` is a cumulative list of multiple `SpeechRecognitionResult` objects. A single timestamp on the outer event wrapper cannot describe the independent start and end boundaries of each historical phrase in the list.
-  2. **Breaks DOM Standards:** `Event.timeStamp` is specified across the web platform as the time the DOM event was dispatched. Overwriting it disrupts developer expectations and deviates from standard DOM event semantics.
-
-- **Browser-Generated Warning Events (`onprocessinglag`):**
-  Simple to catch, but fails to solve timeline association and cannot accommodate varying application needs.
-
 Attaching `speechStartTime` and `speechEndTime` directly to `SpeechRecognitionResult` provides an atomic, 1:1 binding between the recognized transcript text and its corresponding acoustic timeline.
