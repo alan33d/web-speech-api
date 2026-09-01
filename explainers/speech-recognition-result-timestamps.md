@@ -5,8 +5,6 @@
 ### Problem
 
 The Web Speech API currently does not expose the start and end timestamps of the source audio corresponding to a given transcription result (`SpeechRecognitionResult`). This limitation creates a major challenge for API clients requiring timeline association use cases:
-
-- **Timeline Association:** Developers cannot readily associate transcribed text with specific segments of the audio source, making it difficult to map generated captions to media timelines, audio tracks, or video frames:
   - **Subtitling & Closed Captions:** Web applications cannot automatically generate synchronized subtitle tracks (e.g. WebVTT / SRT cues) because they lack the exact `[startTime, endTime]` boundaries for each phrase.
   - **Interactive Meeting Transcripts ("Click-to-Seek"):** In recorded meetings, video lectures, and podcast players, applications cannot offer "click-to-seek" navigation—where clicking on a sentence or word in the transcript jumps media playback to that exact moment.
   - **Live WebRTC Video Sync & Lip-Sync:** In real-time video conferencing (e.g. Google Meet), web applications cannot reliably synchronize live captions or translated subtitles with incoming video frames. Because DOM events conflate speech timing with processing and main-thread queuing delays, subtitles either lag behind speaker lip movement or disappear prematurely.
@@ -95,7 +93,7 @@ recognition.onresult = (event) => {
 
 #### Example 2: Synchronizing Captions with Live WebRTC Video Frames
 
-In live video conferencing, video frames delivered via `HTMLVideoElement.requestVideoFrameCallback()` contain timestamps relative to the document timeline. Developers can map `speechStartTime` and `speechEndTime` to the document timeline to render captions on the exact video frames when the speaker was talking:
+In live video conferencing, video frames delivered via `HTMLVideoElement.requestVideoFrameCallback()` contain presentation timestamps (`metadata.expectedDisplayTime`) relative to the document timeline. When video playout is buffered to accommodate ASR processing, developers can map `speechStartTime` and `speechEndTime` to the document timeline to render captions on the exact video frames when the speaker was talking:
 
 ```javascript
 const recognition = new SpeechRecognition();
@@ -109,16 +107,17 @@ recognition.onaudiostart = (event) => {
   audioOriginTimeMs = event.timeStamp;
 };
 
+// Playout buffer delay (e.g. 1.0s) to allow ASR processing time before video frames are presented
+const PLAYOUT_DELAY_MS = 1000;
 const activeCues = [];
 
 recognition.onresult = (event) => {
   const result = event.results[event.resultIndex];
 
-  // Convert stream offsets (seconds) to document timeline (milliseconds)
-  const startDocTimeMs = audioOriginTimeMs + (result.speechStartTime * 1000);
-  const endDocTimeMs   = audioOriginTimeMs + (result.speechEndTime * 1000);
+  // Convert stream offsets to document timeline, offset by the playout buffer
+  const startDocTimeMs = audioOriginTimeMs + (result.speechStartTime * 1000) + PLAYOUT_DELAY_MS;
+  const endDocTimeMs   = audioOriginTimeMs + (result.speechEndTime * 1000) + PLAYOUT_DELAY_MS;
 
-  // Update or add subtitle cue
   activeCues[event.resultIndex] = {
     text: result[0].transcript,
     start: startDocTimeMs,
@@ -146,7 +145,7 @@ videoElement.requestVideoFrameCallback(renderVideoSubtitleFrame);
 ### Security and Privacy Considerations
 
 #### Fingerprinting Risk
-Exposing sub-millisecond acoustic timing can enable hardware profiling (measuring CPU execution speed, thermal throttling, and system load), creating a potential tracking vector for cross-origin user fingerprinting.
+Exposing sub-millisecond or precise micro-architectural timing information enables hardware profiling (measuring CPU execution speed, thermal throttling, and system load), creating a potential tracking vector for cross-origin user fingerprinting.
 
 #### Mitigation Strategy
 To mitigate potential side-channel and fingerprinting vectors:
