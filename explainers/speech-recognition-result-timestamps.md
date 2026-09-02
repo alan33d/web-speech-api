@@ -91,55 +91,57 @@ recognition.onresult = (event) => {
 
 ---
 
-#### Example 2: Synchronizing Captions with Live WebRTC Video Frames
+#### Example 2: Live Video Conferencing (Live Display + Recording Timeline Association)
 
-In live video conferencing, video frames delivered via `HTMLVideoElement.requestVideoFrameCallback()` contain presentation timestamps (`metadata.expectedDisplayTime`) relative to the document timeline. When video playout is buffered to accommodate ASR processing, developers can map `speechStartTime` and `speechEndTime` to the document timeline to render captions on the exact video frames when the speaker was talking:
+In zero-delay live conferencing (such as Google Meet), captions are displayed immediately upon arrival during the live call to minimize perceived lag. Simultaneously, `speechStartTime` and `speechEndTime` are preserved in the meeting transcript so that the exported recording video track can be rendered with frame-accurate subtitle alignment:
 
-*(See the [interactive live video lip-sync demo](https://alan33d.github.io/web-speech-demos/webrtc_caption_sync_test.html) for a working prototype of this pattern).*
+*(See the [interactive live meeting and recording demo](https://alan33d.github.io/web-speech-demos/live_meeting_recording_demo.html) for a working implementation of this pattern).*
 
 ```javascript
 const recognition = new SpeechRecognition();
 recognition.continuous = true;
 recognition.interimResults = true;
 
-let audioOriginTimeMs = 0;
+// 1. Live Call: Display captions immediately as results arrive
+let hideTimeout = null;
+const liveSubtitleOverlay = document.getElementById('live-captions');
 
-// Capture the audio stream's start timestamp on the document timeline
-recognition.onaudiostart = (event) => {
-  audioOriginTimeMs = event.timeStamp;
-};
-
-// Playout buffer delay (e.g. 1.0s) to allow ASR processing time before video frames are presented
-const PLAYOUT_DELAY_MS = 1000;
-const activeCues = [];
+// 2. Meeting Transcript: Archive finalized results with exact audio boundaries
+const meetingTranscript = [];
 
 recognition.onresult = (event) => {
   const result = event.results[event.resultIndex];
+  const transcriptText = result[0].transcript;
 
-  // Convert stream offsets to document timeline, offset by the playout buffer
-  const startDocTimeMs = audioOriginTimeMs + (result.speechStartTime * 1000) + PLAYOUT_DELAY_MS;
-  const endDocTimeMs   = audioOriginTimeMs + (result.speechEndTime * 1000) + PLAYOUT_DELAY_MS;
+  // Render live captions immediately on screen
+  liveSubtitleOverlay.textContent = transcriptText;
+  liveSubtitleOverlay.classList.toggle('interim', !result.isFinal);
 
-  activeCues[event.resultIndex] = {
-    text: result[0].transcript,
-    start: startDocTimeMs,
-    end: endDocTimeMs,
-    isFinal: result.isFinal
-  };
+  // Keep final captions on screen for a 3-second reading persistence window
+  clearTimeout(hideTimeout);
+  if (result.isFinal) {
+    hideTimeout = setTimeout(() => {
+      liveSubtitleOverlay.textContent = '';
+    }, 3000);
+
+    // Archive the finalized sentence with exact acoustic timestamps
+    meetingTranscript.push({
+      text: transcriptText,
+      startTime: result.speechStartTime,
+      endTime: result.speechEndTime
+    });
+  }
 };
 
-// Frame-accurate rendering loop synchronized with WebRTC video playback
-function renderVideoSubtitleFrame(now, metadata) {
-  const currentVideoDocTimeMs = metadata.expectedDisplayTime; // document timeline
+// 3. Post-Meeting Replay: Synchronize caption cues with the recorded meeting video
+function initializeRecordingCaptions(recordedVideoElement) {
+  const captionTrack = recordedVideoElement.addTextTrack('captions', 'Meeting Captions');
+  captionTrack.mode = 'showing';
 
-  const currentCue = activeCues.find(
-    cue => currentVideoDocTimeMs >= cue.start && currentVideoDocTimeMs <= cue.end
-  );
-
-  subtitleOverlay.textContent = currentCue ? currentCue.text : '';
-  videoElement.requestVideoFrameCallback(renderVideoSubtitleFrame);
+  for (const entry of meetingTranscript) {
+    captionTrack.addCue(new VTTCue(entry.startTime, entry.endTime, entry.text));
+  }
 }
-videoElement.requestVideoFrameCallback(renderVideoSubtitleFrame);
 ```
 
 ---
